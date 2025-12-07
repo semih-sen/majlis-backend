@@ -1,37 +1,31 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Majlis Test</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Majlis - Görüntülü Görüşme</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-    <h2>Majlis Bağlantı Testi</h2>
-    <p>Durum: <span id="durum">Bağlanıyor...</span></p>
 
-    <script>
-        // Sunucuya bağlanmaya çalışıyoruz
-        // Dikkat: ws:// değil, http:// protokolü üzerinden kütüphane kendi halleder
-        const socket = io('http://localhost:3000');
+  <div class="header">
+    <h1>Majlis</h1>
+    <div class="controls">
+      <input type="text" id="room-input" placeholder="Oda Adı (Örn: divan)" value="divan">
+      <button onclick="joinRoom()">Odaya Gir</button>
+    </div>
+  </div>
 
-        const durumYazisi = document.getElementById('durum');
+  <div id="video-grid">
+    <div class="video-card">
+      <video id="local-video" autoplay muted playsinline></video>
+      <span>Sen (Ustam)</span>
+    </div>
+    </div>
 
-        // Bağlantı kurulursa burası çalışır
-        socket.on('connect', () => {
-            console.log("Bağlandı! Socket ID:", socket.id);
-            durumYazisi.innerText = "BAĞLANDI! (ID: " + socket.id + ")";
-            durumYazisi.style.color = "green";
-            
-            // Odaya girme denemesi yapalım
-            socket.emit('join-room', 'cay-odasi', 'user-123');
-        });
+  <div id="logs"></div>
 
-        // Bağlantı koparsa burası çalışır
-        socket.on('disconnect', () => {
-            console.log("Bağlantı koptu");
-            durumYazisi.innerText = "Bağlantı Koptu";
-            durumYazisi.style.color = "red";
-        });
-    </script>
+  <script src="script.js"></script>
 </body>
 </html>
