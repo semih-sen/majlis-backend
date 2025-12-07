@@ -12,35 +12,47 @@ io.on('connection', (socket) => {
   
   console.log(`Biri kapıyı çaldı: ${socket.id}`);
 
-  // 1. ODAYA GİRİŞ
-  socket.on('join-room', (roomId, userId) => {
+  // 1. ODAYA GİRİŞ (DÜZELTİLDİ)
+  // Frontend: emit('join-room', roomId, username) gönderiyor.
+  socket.on('join-room', (roomId, username) => {
     socket.join(roomId);
-    console.log(`Kullanıcı ${userId} (${socket.id}), ${roomId} odasına girdi.`);
-    // Odadakilere haber ver
-    socket.to(roomId).emit('user-connected', userId);
+    
+    // Güvenilir ID, Socket'in kendi ID'sidir. Onu kullanalım.
+    const peerId = socket.id; 
+    
+    console.log(`Kullanıcı ${username} (${peerId}), ${roomId} odasına girdi.`);
+
+    // --- KRİTİK DÜZELTME BURASI ---
+    // Frontend bizden bir OBJE bekliyor: { peerId, username }
+    // Eskiden sadece string gönderiyorduk, o yüzden undefined geliyordu.
+    socket.to(roomId).emit('user-connected', { 
+      peerId: peerId, 
+      username: username 
+    });
 
     socket.on('disconnect', () => {
-      console.log(`Biri kaçtı: ${userId}`);
-      socket.to(roomId).emit('user-disconnected', userId);
+      console.log(`Biri kaçtı: ${username} (${peerId})`);
+      // Çıkarken de aynı paketi gönderelim ki kimin çıktığı belli olsun
+      socket.to(roomId).emit('user-disconnected', { 
+        peerId: peerId, 
+        username: username 
+      });
     });
   });
 
   // 2. YAZILI SOHBET
-  socket.on('send-message', (roomId, message, userName) => {
-    socket.to(roomId).emit('create-message', message, userName);
+  socket.on('send-message', (roomId, message, senderId) => { // userName yerine senderId daha güvenli olabilir ama şimdilik kalsın
+    socket.to(roomId).emit('create-message', message, senderId);
   });
 
-  // 3. WEBRTC SİNYALLERİ (AKILLI SANTRAL GÜNCELLEMESİ)
-  // Offer, Answer ve Ice-Candidate olaylarını tek tek yazmak yerine
-  // Ortak bir mantıkla "Hedef varsa hedefe, yoksa odaya" gönderelim.
-
+  // 3. WEBRTC SİNYALLERİ (AKILLI SANTRAL)
   const signalHandler = (eventName, data) => {
-    // SENARYO A: Hedef belliyse (Targeted) -> Direkt o kişiye gönder (Renegotiation için şart)
+    // SENARYO A: Hedef belliyse -> Direkt o kişiye
     if (data.targetId) {
       io.to(data.targetId).emit(eventName, data);
       console.log(`Özel Sinyal (${eventName}): ${socket.id} -> ${data.targetId}`);
     } 
-    // SENARYO B: Hedef yoksa ama oda varsa (Broadcast) -> Odaya yay
+    // SENARYO B: Hedef yoksa -> Odaya (Eski usul fallback)
     else if (data.roomId) {
       socket.to(data.roomId).emit(eventName, data);
       console.log(`Genel Sinyal (${eventName}): ${data.roomId} odasına.`);
@@ -55,5 +67,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Majlis v2.1 (Akıllı Santral) ${PORT} portunda hazır!`);
+  console.log(`Majlis v2.2 (JSON Paketli) ${PORT} portunda hazır!`);
 });
